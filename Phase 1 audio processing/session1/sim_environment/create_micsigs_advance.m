@@ -1,8 +1,8 @@
 % create_micsigs.m
 % clc; clear all; close all
 %% config
-length_limit = 1000000;
-upsampling = 441000;
+length_limit = 10; % (s)
+upsampling_FS = 441000;
 
 %% config of impulse response
 impulse_positions = ["s30";"s60";"s90";"s-30";"s-60";"s-90"];
@@ -38,20 +38,21 @@ dry_filename{1}         = 'audio_files/part1_track1_dry.wav';
 [target_signal, target_Fs]   = audioread(dry_filename{1});
 
 %% load impulse response
-for i=1:1
+for i=1:length(impulse_positions)
     [impulse_L1{i}, Fs]   = audioread(strcat(impulse_path, impulse_positions(i), L1_impulse_filename));
-    impulse_L1{i}  = resample(impulse_L1{i}, upsampling, Fs);
+    impulse_L1{i}  = resample(impulse_L1{i}, upsampling_FS, Fs);
     [impulse_L2{i}, Fs]   = audioread(strcat(impulse_path, impulse_positions(i), L2_impulse_filename));
-    impulse_L2{i}  = resample(impulse_L2{i}, upsampling, Fs);
+    impulse_L2{i}  = resample(impulse_L2{i}, upsampling_FS, Fs);
     [impulse_R1{i}, Fs]   = audioread(strcat(impulse_path, impulse_positions(i), R1_impulse_filename));
-    impulse_R1{i}  = resample(impulse_R1{i}, upsampling, Fs);
+    impulse_R1{i}  = resample(impulse_R1{i}, upsampling_FS, Fs);
     [impulse_R2{i}, Fs]   = audioread(strcat(impulse_path, impulse_positions(i), R2_impulse_filename));
-    impulse_R2{i}  = resample(impulse_R2{i}, upsampling, Fs);
+    impulse_R2{i}  = resample(impulse_R2{i}, upsampling_FS, Fs);
 end
 
 
 %% preprocess for waveform
-target_signal  = resample(target_signal, upsampling, target_Fs);
+target_signal  = resample(target_signal, upsampling_FS, target_Fs);
+target_signal  = target_signal(1:length_limit* upsampling_FS);
 
 % original_source{1}  = resample(source{1}, fs_RIR, source_Fs{1});
 % original_source{2}  = resample(source{2}, fs_RIR, source_Fs{2});

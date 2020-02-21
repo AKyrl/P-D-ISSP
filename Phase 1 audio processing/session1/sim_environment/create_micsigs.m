@@ -1,9 +1,9 @@
 % create_micsigs.m
 % clc; clear all; close all
 %% config
-length_limit = 1000000;
+length_limit = 10; % (s)
 
-%% define filenames of waveforms and load waveforms
+%% define filenames of waveforms
 
 speech_filename{1}      = 'audio_files/speech1.wav';
 speech_filename{2}      = 'audio_files/speech2.wav';
@@ -19,6 +19,8 @@ bubble_filename         = 'audio_files/Babble_noise1.wav';
 % noise_filename = dry_filename;
 noise_filename = whitenoise_filename;
 
+%% load waveforms
+
 [source{1}, source_Fs{1}]   = audioread(speech_filename{1});
 [source{2}, source_Fs{2}]   = audioread(speech_filename{2});
 
@@ -29,33 +31,37 @@ noise_filename = whitenoise_filename;
 %% load RIRs
 load Computed_RIRs.mat
 
-%% preprocess for waveform
+%% preprocess for waveform (resample, truncation)
 original_source{1}  = resample(source{1}, fs_RIR, source_Fs{1});
-original_source{2}  = resample(source{2}, fs_RIR, source_Fs{2});
+% original_source{2}  = resample(source{2}, fs_RIR, source_Fs{2});
 
 original_noise{1}   = resample(noise{1}, fs_RIR, noise_Fs{1});
 original_noise{2}   = resample(noise{2}, fs_RIR, noise_Fs{2});
 
-original_source{1}  = original_source{1}(1:length_limit);
-original_source{2}  = original_source{2}(1:length_limit);
+original_source{1}  = original_source{1}(1:length_limit*fs_RIR);
+% original_source{2}  = original_source{2}(1:length_limit*fs_RIR);
 
-original_noise{1}  = original_noise{1}(1:length_limit);
-original_noise{2}  = original_noise{2}(1:length_limit);
+original_noise{1}  = original_noise{1}(1:length_limit*fs_RIR);
+original_noise{2}  = original_noise{2}(1:length_limit*fs_RIR);
 
 noisy_source{1}     = original_source{1} + original_noise{1};
-noisy_source{2}     = original_source{2} + original_noise{2};
+% noisy_source{2}     = original_source{2} + original_noise{2};
 
 %% filter data
-% for i=1:length(original_source)
-%     for j=1:size(RIR_sources,2)
-%         Mic{j,i} = fftfilt(RIR_sources(:,j,i), original_source{i});
-%     end
-% end
-for i=1:length(noisy_source)
+Mic = zeros(    length(original_source)+length(noisy_source), ...
+                size(RIR_sources,2), ...
+                length_limit*fs_RIR);
+
+for i=1:length(original_source)
     for j=1:size(RIR_sources,2)
-        Mic{j,i} = fftfilt(RIR_sources(:,j,i), noisy_source{i});
+        Mic(i,j,:)= fftfilt(RIR_sources(:,j,i), original_source{i});
     end
 end
+% for i=1:length(noisy_source)
+%     for j=1:size(RIR_sources,2)
+%         Mic{j,i} = fftfilt(RIR_sources(:,j,i), noisy_source{i});
+%     end
+% end
 
 
 % for i=1:length(original_noise)
