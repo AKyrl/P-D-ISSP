@@ -1,5 +1,5 @@
 % create_micsigs.m
-% clc; clear all; close all
+clear all; 
 %% config
 length_limit = 10; % (s)
 
@@ -14,10 +14,10 @@ whitenoise_filename{2}  = 'audio_files/whitenoise_signal_2.wav';
 dry_filename{1}         = 'audio_files/part1_track1_dry.wav';
 dry_filename{2}         = 'audio_files/part1_track2_dry.wav';
 
-bubble_filename         = 'audio_files/Babble_noise1.wav';
+bubble_filename{1}         = 'audio_files/Babble_noise1.wav';
 
 % noise_filename = dry_filename;
-noise_filename = whitenoise_filename;
+noise_filename = bubble_filename;
 
 %% load waveforms
 
@@ -26,37 +26,78 @@ noise_filename = whitenoise_filename;
 
 
 [noise{1}, noise_Fs{1}]   = audioread(noise_filename{1});
-[noise{2}, noise_Fs{2}]   = audioread(noise_filename{2});
+% [noise{2}, noise_Fs{2}]   = audioread(noise_filename{2});
 
 %% load RIRs
 load Computed_RIRs.mat
 
 %% preprocess for waveform (resample, truncation)
 original_source{1}  = resample(source{1}, fs_RIR, source_Fs{1});
-% original_source{2}  = resample(source{2}, fs_RIR, source_Fs{2});
+original_source{2}  = resample(source{2}, fs_RIR, source_Fs{2});
 
 original_noise{1}   = resample(noise{1}, fs_RIR, noise_Fs{1});
-original_noise{2}   = resample(noise{2}, fs_RIR, noise_Fs{2});
+% original_noise{2}   = resample(noise{2}, fs_RIR, noise_Fs{2});
 
+VAD=abs(original_source{1}(:,1))>std(original_source{1}(:,1))*1e-3;
+original_source{1} =  original_source{1}(VAD==1,1);
 original_source{1}  = original_source{1}(1:length_limit*fs_RIR);
-% original_source{2}  = original_source{2}(1:length_limit*fs_RIR);
+
+VAD=abs(original_source{2}(:,1))>std(original_source{2}(:,1))*1e-3;
+original_source{2} =  original_source{2}(VAD==1,1);
+original_source{2}  = original_source{2}(1:length_limit*fs_RIR);
+%soundsc(original_source{1},fs_RIR)
 
 original_noise{1}  = original_noise{1}(1:length_limit*fs_RIR);
-original_noise{2}  = original_noise{2}(1:length_limit*fs_RIR);
+% original_noise{2}  = original_noise{2}(1:length_limit*fs_RIR);
 
 noisy_source{1}     = original_source{1} + original_noise{1};
 % noisy_source{2}     = original_source{2} + original_noise{2};
 
 %% filter data
-Mic = zeros(    length(original_source)+length(noisy_source), ...
+Mic_noise = zeros(      length(original_noise), ...
+                        size(RIR_sources,2), ...
+                        length_limit*fs_RIR);
+
+Mic = zeros(    length(original_source), ...
                 size(RIR_sources,2), ...
                 length_limit*fs_RIR);
 
-for i=1:length(original_source)
-    for j=1:size(RIR_sources,2)
-        Mic(i,j,:)= fftfilt(RIR_sources(:,j,i), original_source{i});
+for i=1:length(original_noise)
+    for mic_idx=1:size(RIR_noise,2)
+        Mic_noise(i,mic_idx,:)= fftfilt(RIR_noise(:,mic_idx,i), original_noise{i});
     end
 end
+
+for i=1:length(original_source)
+    for mic_idx=1:size(RIR_sources,2)
+        Mic(i,mic_idx,:)= fftfilt(RIR_sources(:,mic_idx,i), original_source{i});
+    end
+end
+
+
+
+
+
+%% for week 3 (adding noise and filter out weak signal)
+for channel_idx=1:size(Mic(:,:,:),1)
+    for mic_idx=1:size(RIR_sources,2)
+        microphone_power(channel_idx,mic_idx)  = var(Mic(channel_idx,mic_idx,:),0,'all');
+        noise = wgn(1,size(Mic(channel_idx,mic_idx,:),3),10*log10(0.1*microphone_power(channel_idx,1)));
+        noise = reshape(noise,[1,1,length(noise)]);
+        noise = noise + Mic_noise(1,mic_idx,:);
+        noise_power(channel_idx,mic_idx) = var(noise,0,'all');
+        Mic(channel_idx,mic_idx,:) = Mic(channel_idx,mic_idx,:) + noise;
+    end
+end
+
+SNR = 10*log10(microphone_power./noise_power);
+
+sound = Mic(2,1,:);
+sound = reshape(sound,[1,length(sound)]);
+soundsc(sound,fs_RIR)
+
+
+
 % for i=1:length(noisy_source)
 %     for j=1:size(RIR_sources,2)
 %         Mic{j,i} = fftfilt(RIR_sources(:,j,i), noisy_source{i});
@@ -64,11 +105,6 @@ end
 % end
 
 
-% for i=1:length(original_noise)
-%     for j=1:size(RIR_noise,2)
-%         Mic{j,i+length(original_source)} = fftfilt(RIR_noise(:,j,i), original_noise{i});
-%     end
-% end
 
 %% visualize seperate result
 
@@ -96,34 +132,3 @@ end
 % Mic_2 = fftfilt(RIR_sources(:,1,1), original_source{1}(1:length_limit));
 % Mic_2 = Mic_2 + fftfilt(RIR_noise(:,1,1), bubble(1:length_limit));
 % soundsc(Mic_2,fs_RIR)
-
-
-%% old code
-% %% mySA - preprocess
-% 
-% %% mySA - RIRs estimation
-% xy_mic = zeros(S.L_mic,2);
-% xy_audio = zeros(S.L_audio,2);
-% 
-% 
-% for k = 1:S.nmic
-%     xy_mic (k,:) = [get(S.hpc_mic(k),'Xdata') get(S.hpc_mic(k),'Ydata')];
-% end
-% 
-% for k = 1:S.L_audio
-%     xy_audio (k,:) = [get(S.hpc_audio(k),'Xdata') get(S.hpc_audio(k),'Ydata')];
-% end
-% 
-% if S.L_noise > 0
-%     xy_noise = zeros(S.L_noise,2);
-%     for k = 1:S.L_noise
-%         xy_noise (k,:) = [get(S.hpc_noise(k),'Xdata') get(S.hpc_noise(k),'Ydata')];
-%     end
-% else
-%     xy_noise = [];
-% end
-% 
-% %% mySA - final process (save)
-% create_rirs(xy_mic,xy_audio,xy_noise,S.rdim*[1 1],S.reverb,S.fs,S.lRIR);
-% ed = msgbox('RIRs created and stored in Computed_RIRs.mat!');
-% uiwait(ed);
