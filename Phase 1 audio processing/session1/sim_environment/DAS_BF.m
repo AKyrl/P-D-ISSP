@@ -9,7 +9,7 @@ run MUSIC_narrowband.m;
 
 Q = size(RIR_sources,3);
 
-delay = abs(cosd(DOA_est)*mic_distance/100);
+delay = abs(cosd(DOA_est)*mic_distance/100/340);
 
 samples = ceil(delay*fs_RIR);
 
@@ -25,28 +25,30 @@ if(DOA_est<90)
         noise = reshape(noise,size(noise_DAS));
         noise_DAS(1:end-(i-1)*samples) = noise((i-1)*samples+1:end)+ noise_DAS(1:end-(i-1)*samples);
     end
-% elseif(DOA_est>90)
-%      for i=size(RIR_sources,2):-1:1
-%         speech = Mic(1,i,:);
-%         speech = reshape(speech,size(speech_DAS));
-%         speech_DAS = i*delay*speech+ speech_DAS;
-%         
-%         noise = reshape(noise,size(noise_DAS));
-%         noise_DAS = i*delay*noise + noise_DAS;
-%     end
-% else
-%     print 'you are doomed';
+elseif(DOA_est>90)
+     for i=1:size(RIR_sources,2)
+         count = size(RIR_sources,2) - i+1;
+        speech = Mic(1,i,:);
+        speech = reshape(speech,size(speech_DAS));
+        speech_DAS(1:end-(count-1)*samples) = speech((count-1)*samples+1:end)+ speech_DAS(1:end-(count-1)*samples);
+        
+        noise = reshape(noise,size(noise_DAS));
+        noise_DAS(1:end-(count-1)*samples) = noise((count-1)*samples+1:end)+ noise_DAS(1:end-(count-1)*samples);
+        
+    end
+else
+    print 'you are doomed';
     
 end
 
 speech_DAS = speech_DAS/size(RIR_sources,2);
 noise_DAS = noise_DAS/size(RIR_sources,2);
 
-DAS_out = 3*(speech_DAS+noise_DAS);
+DAS_out = 2*(speech_DAS+noise_DAS);
 figure
-plot(sound);
+plot(reshape(Mic(1,1,:),size(speech_DAS)));
 hold on;
-plot(DAS_out);
+plot(speech_DAS);
 
 soundsc(DAS_out,fs_RIR)
 speech_power_DAS = var(speech_DAS);

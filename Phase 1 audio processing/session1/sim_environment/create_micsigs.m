@@ -84,7 +84,7 @@ for channel_idx=1:size(Mic(:,:,:),1)
         microphone_power(channel_idx,mic_idx)  = var(Mic(channel_idx,mic_idx,:),0,'all');
         noise = wgn(1,size(Mic(channel_idx,mic_idx,:),3),10*log10(0.1*microphone_power(channel_idx,1)));
         noise = reshape(noise,[1,1,length(noise)]);
-        noise = Mic_noise(1,mic_idx,:);% noise + 
+        noise =  noise + Mic_noise(1,mic_idx,:);% 
         noise_power(channel_idx,mic_idx) = var(noise,0,'all');
         speech_noise(channel_idx,mic_idx,:) = Mic(channel_idx,mic_idx,:) + noise;
     end
@@ -94,7 +94,7 @@ SNR = 10*log10(microphone_power./noise_power);
 
 sound = speech_noise(1,1,:);
 sound = reshape(sound,[1,length(sound)]);
-% soundsc(sound,fs_RIR)
+%soundsc(sound,fs_RIR)
 
 
 
