@@ -70,7 +70,7 @@ end
 
 for i=1:length(original_source)
     for mic_idx=1:size(RIR_sources,2)
-        Mic(i,mic_idx,:)= fftfilt(RIR_sources(:,mic_idx,i), original_source{i});
+        Mic(i,mic_idx,:)= fftfilt(RIR_sources(:,mic_idx), original_source{i});
     end
 end
 
@@ -86,15 +86,15 @@ for channel_idx=1:size(Mic(:,:,:),1)
         noise = reshape(noise,[1,1,length(noise)]);
         noise = noise + Mic_noise(1,mic_idx,:);
         noise_power(channel_idx,mic_idx) = var(noise,0,'all');
-        Mic(channel_idx,mic_idx,:) = Mic(channel_idx,mic_idx,:) + noise;
+        speech_noise(channel_idx,mic_idx,:) = Mic(channel_idx,mic_idx,:) + noise;
     end
 end
 
 SNR = 10*log10(microphone_power./noise_power);
 
-sound = Mic(2,1,:);
+sound = speech_noise(1,1,:);
 sound = reshape(sound,[1,length(sound)]);
-soundsc(sound,fs_RIR)
+% soundsc(sound,fs_RIR)
 
 
 
