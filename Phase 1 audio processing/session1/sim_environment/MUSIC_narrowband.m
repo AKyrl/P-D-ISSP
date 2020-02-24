@@ -77,8 +77,8 @@ end
 Music_pseudospectrum_sorted = findpeaks(abs(Music_pseudospectrum));
 
 for i=1:number_of_source_channel
-    disp(['DOA' num2str(i) ':' num2str(angles_cal(find(Music_pseudospectrum==Music_pseudospectrum_sorted(i))))]);
-    DOA_est(i) = angles_cal(find(Music_pseudospectrum==Music_pseudospectrum_sorted(i),1));
+    disp(['DOA' num2str(i) ':' num2str(angles_cal(find(abs(Music_pseudospectrum)==Music_pseudospectrum_sorted(i))))]);
+    DOA_est(i) = angles_cal(find(abs(Music_pseudospectrum)==Music_pseudospectrum_sorted(i),1));
 end
 save('DOA_est','DOA_est');
 
