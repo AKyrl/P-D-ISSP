@@ -5,9 +5,11 @@
 %% config
 STFT_L              = 1024;
 STFT_overlap        = 50;
-target_signals_name = 'Mic(1,:,:)';
+target_signals_name = 'Mic(1,:,:)+Mic(2,:,:)';
 mic_distance        = abs(m_pos(1,2)-m_pos(2,2))*100; % (cm)
 sampling_frequency  = 44100;
+number_of_source_channel = 2;
+
 
 %% load target audio source
 eval(['target_signals = ',target_signals_name,';']);
@@ -53,7 +55,7 @@ end
 % 
 correlation_matrix = recorded_signal_at_w*recorded_signal_at_w';
 [EigenVector EigenValue ] = eig(correlation_matrix);
-EigenVector = EigenVector(:,1:size(EigenVector,2)-1);
+EigenVector = EigenVector(:,1:size(EigenVector,2)-number_of_source_channel);
 % Music_pseudospectrum = zeros(size(target_signals_stft,1),length(angles));
 Music_pseudospectrum = zeros(size(angles));
 Mic_position = [0:mic_distance:mic_distance*(size(target_signals_stft,1)-1)];
@@ -65,16 +67,21 @@ for i=1:length(angles)
     manifold_vector = exp((cosd(angles(i))*Mic_position./340./100).*1i.*w'*2*pi);
     manifold_vector = reshape(manifold_vector, [size(target_signals_stft,1) 1]);
 %     for j=1:size(target_signals_stft,1)
-%     manifold_vector = exp([0:mic_distance:mic_distance*(size(target_signals_stft,1)-1)].*(-1i).*angle(i).*w')
+%     manifold_vector findpeaks= exp([0:mic_distance:mic_distance*(size(target_signals_stft,1)-1)].*(-1i).*angle(i).*w')
 %         e = reshape(EigenValue(j,:),[size(EigenValue,2),1]);
     Music_pseudospectrum(i) = 1/(manifold_vector'*EigenVector*EigenVector'*manifold_vector);
 %         Music_pseudospectrum(j,i) = 1/(manifold_vector'*e*e'*manifold_vector);
 %     end
 end
 
-disp(['DOA:' num2str(angles_cal(find(Music_pseudospectrum==max(Music_pseudospectrum))))]);
-DOA_est(1) = angles_cal(find(Music_pseudospectrum==max(Music_pseudospectrum),1));
+Music_pseudospectrum_sorted = findpeaks(abs(Music_pseudospectrum));
+
+for i=1:number_of_source_channel
+    disp(['DOA' num2str(i) ':' num2str(angles_cal(find(Music_pseudospectrum==Music_pseudospectrum_sorted(i))))]);
+    DOA_est(i) = angles_cal(find(Music_pseudospectrum==Music_pseudospectrum_sorted(i),1));
+end
 save('DOA_est','DOA_est');
+
 
 
 % correlation_matrix = zeros(size(target_signals_stft,1), size(target_signals_stft,1));
