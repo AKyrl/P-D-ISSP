@@ -11,6 +11,8 @@ Q = size(RIR_sources,3);
 
 delay = abs(cosd(DOA_est)*mic_distance/100);
 
+samples = ceil(delay*fs_RIR);
+
 speech_DAS = zeros(size(Mic,3),1);
 noise_DAS = zeros(size(noise,3),1);
 
@@ -18,29 +20,29 @@ if(DOA_est<90)
     for i=1:size(RIR_sources,2)
         speech = Mic(1,i,:);
         speech = reshape(speech,size(speech_DAS));
-        speech_DAS = i*delay*speech+ speech_DAS;
+        speech_DAS(1:end-(i-1)*samples) = speech((i-1)*samples+1:end)+ speech_DAS(1:end-(i-1)*samples);
         
         noise = reshape(noise,size(noise_DAS));
-        noise_DAS = i*delay*noise + noise_DAS;
+        noise_DAS(1:end-(i-1)*samples) = noise((i-1)*samples+1:end)+ noise_DAS(1:end-(i-1)*samples);
     end
-elseif(DOA_est>90)
-     for i=size(RIR_sources,2):-1:1
-        speech = Mic(1,i,:);
-        speech = reshape(speech,size(speech_DAS));
-        speech_DAS = i*delay*speech+ speech_DAS;
-        
-        noise = reshape(noise,size(noise_DAS));
-        noise_DAS = i*delay*noise + noise_DAS;
-    end
-else
-    print 'you are doomed';
+% elseif(DOA_est>90)
+%      for i=size(RIR_sources,2):-1:1
+%         speech = Mic(1,i,:);
+%         speech = reshape(speech,size(speech_DAS));
+%         speech_DAS = i*delay*speech+ speech_DAS;
+%         
+%         noise = reshape(noise,size(noise_DAS));
+%         noise_DAS = i*delay*noise + noise_DAS;
+%     end
+% else
+%     print 'you are doomed';
     
 end
 
 speech_DAS = speech_DAS/size(RIR_sources,2);
 noise_DAS = noise_DAS/size(RIR_sources,2);
 
-DAS_out = 10*(speech_DAS+noise_DAS);
+DAS_out = 3*(speech_DAS+noise_DAS);
 figure
 plot(sound);
 hold on;

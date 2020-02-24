@@ -17,7 +17,7 @@ dry_filename{2}         = 'audio_files/part1_track2_dry.wav';
 bubble_filename{1}         = 'audio_files/Babble_noise1.wav';
 
 % noise_filename = dry_filename;
-noise_filename = bubble_filename;
+noise_filename = speech_filename{2};
 
 %% load waveforms
 
@@ -25,7 +25,7 @@ noise_filename = bubble_filename;
 [source{2}, source_Fs{2}]   = audioread(speech_filename{2});
 
 
-[noise{1}, noise_Fs{1}]   = audioread(noise_filename{1});
+[noise{1}, noise_Fs{1}]   = audioread(noise_filename);
 % [noise{2}, noise_Fs{2}]   = audioread(noise_filename{2});
 
 %% load RIRs
@@ -84,7 +84,7 @@ for channel_idx=1:size(Mic(:,:,:),1)
         microphone_power(channel_idx,mic_idx)  = var(Mic(channel_idx,mic_idx,:),0,'all');
         noise = wgn(1,size(Mic(channel_idx,mic_idx,:),3),10*log10(0.1*microphone_power(channel_idx,1)));
         noise = reshape(noise,[1,1,length(noise)]);
-        noise = noise + Mic_noise(1,mic_idx,:);
+        noise = Mic_noise(1,mic_idx,:);% noise + 
         noise_power(channel_idx,mic_idx) = var(noise,0,'all');
         speech_noise(channel_idx,mic_idx,:) = Mic(channel_idx,mic_idx,:) + noise;
     end
