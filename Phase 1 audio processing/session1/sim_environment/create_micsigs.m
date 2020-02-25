@@ -54,11 +54,13 @@ noisy_source{1}     = original_source{1} + original_noise{1};
 % noisy_source{2}     = original_source{2} + original_noise{2};
 
 %% filter data
-Mic_noise = zeros(      length(original_noise), ...
-                        size(RIR_sources,2), ...
+Mic_noise = zeros(      min(length(original_noise),size(RIR_noise,3)), ...
+                        size(RIR_noise,2), ...
                         length_limit*fs_RIR);
 
-Mic = zeros(    length(original_source), ...
+                    
+                    
+Mic = zeros(    min(length(original_source),size(RIR_sources,3)), ...
                 size(RIR_sources,2), ...
                 length_limit*fs_RIR);
 
@@ -68,9 +70,9 @@ for i=1:length(original_noise)
     end
 end
 
-for i=1:length(original_source)
+for i=1:min(length(original_source),size(RIR_sources,3))
     for mic_idx=1:size(RIR_sources,2)
-        Mic(i,mic_idx,:)= fftfilt(RIR_sources(:,mic_idx), original_source{i});
+        Mic(i,mic_idx,:)= fftfilt(RIR_sources(:,mic_idx,i), original_source{i});
     end
 end
 
@@ -96,39 +98,3 @@ sound = speech_noise(1,1,:);
 sound = reshape(sound,[1,length(sound)]);
 %soundsc(sound,fs_RIR)
 
-
-
-% for i=1:length(noisy_source)
-%     for j=1:size(RIR_sources,2)
-%         Mic{j,i} = fftfilt(RIR_sources(:,j,i), noisy_source{i});
-%     end
-% end
-
-
-
-%% visualize seperate result
-
-% for j=1:size(Mic, 1)
-%     figure('name', ['Mic',num2str(j)])
-%     hold on
-%     for i=1:size(Mic, 2)
-%         plot(Mic{j,i})
-%     end
-% end
-
-%% result fustion and visualization
-
-% figure('name', 'Mic_1')
-% hold on
-% for j=1:size(Mic, 1)
-%     Mic_1{j} = Mic{j,1};
-%     for i=2:size(Mic, 2)
-%         Mic_1{j} = Mic{j,i} + Mic_1{j};
-%     end
-%     plot(Mic_1{j})
-% end
-
-%% play result with bubble_noise
-% Mic_2 = fftfilt(RIR_sources(:,1,1), original_source{1}(1:length_limit));
-% Mic_2 = Mic_2 + fftfilt(RIR_noise(:,1,1), bubble(1:length_limit));
-% soundsc(Mic_2,fs_RIR)
