@@ -1,7 +1,8 @@
 % create_micsigs.m
 clear all; 
+
 %% config
-length_limit = 10; % (s)
+run config.m
 
 %% define filenames of waveforms
 
@@ -17,7 +18,9 @@ dry_filename{2}         = 'audio_files/part1_track2_dry.wav';
 bubble_filename{1}         = 'audio_files/Babble_noise1.wav';
 
 % noise_filename = dry_filename;
-noise_filename = speech_filename{2};
+noise_filename = bubble_filename{1};
+% noise_filename = whitenoise_filename{1};
+% noise_filename = speech_filename{2};
 
 %% load waveforms
 
@@ -38,12 +41,12 @@ original_source{2}  = resample(source{2}, fs_RIR, source_Fs{2});
 original_noise{1}   = resample(noise{1}, fs_RIR, noise_Fs{1});
 % original_noise{2}   = resample(noise{2}, fs_RIR, noise_Fs{2});
 
-VAD=abs(original_source{1}(:,1))>std(original_source{1}(:,1))*1e-3;
-original_source{1} =  original_source{1}(VAD==1,1);
+% VAD=abs(original_source{1}(:,1))>std(original_source{1}(:,1))*1e-3;
+% original_source{1} =  original_source{1}(VAD==1,1);
 original_source{1}  = original_source{1}(1:length_limit*fs_RIR);
 
-VAD=abs(original_source{2}(:,1))>std(original_source{2}(:,1))*1e-3;
-original_source{2} =  original_source{2}(VAD==1,1);
+% VAD=abs(original_source{2}(:,1))>std(original_source{2}(:,1))*1e-3;
+% original_source{2} =  original_source{2}(VAD==1,1);
 original_source{2}  = original_source{2}(1:length_limit*fs_RIR);
 %soundsc(original_source{1},fs_RIR)
 
@@ -83,11 +86,12 @@ end
 %% for week 3 (adding noise and filter out weak signal)
 for channel_idx=1:size(Mic(:,:,:),1)
     for mic_idx=1:size(RIR_sources,2)
-        microphone_power(channel_idx,mic_idx)  = var(Mic(channel_idx,mic_idx,:),0,'all');
+        VAD=abs(original_source{channel_idx}(:,1))>std(original_source{channel_idx}(:,1))*1e-3;
+        microphone_power(channel_idx,mic_idx)  = var(Mic(channel_idx,mic_idx,VAD==1),0,'all');
         noise = wgn(1,size(Mic(channel_idx,mic_idx,:),3),10*log10(0.1*microphone_power(channel_idx,1)));
         noise = reshape(noise,[1,1,length(noise)]);
-        noise =  noise + Mic_noise(1,mic_idx,:);% 
-        noise_power(channel_idx,mic_idx) = var(noise,0,'all');
+        noise =  0.9*(noise + Mic_noise(1,mic_idx,:));% 
+        noise_power(channel_idx,mic_idx) = var(noise(1,1,VAD==1),0,'all');
         speech_noise(channel_idx,mic_idx,:) = Mic(channel_idx,mic_idx,:) + noise;
     end
 end

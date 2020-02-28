@@ -3,16 +3,18 @@
 % should run create_micsigs.m before run MUSIC_wideband.m
 
 %% config
-STFT_L              = 1024;
-STFT_overlap        = 50;
-target_signals_name = 'Mic(1,:,:)+Mic(2,:,:)';
-mic_distance        = abs(m_pos(1,2)-m_pos(2,2))*100; % (cm)
-sampling_frequency  = 44100;
-number_of_source_channel = 2;
+run create_micsigs.m
+run config.m
+% STFT_L              = 1024;
+% STFT_overlap        = 50;
+% target_signals_name = 'Mic(1,:,:)';
+% mic_distance        = abs(m_pos(1,2)-m_pos(2,2))*100; % (cm)
+% sampling_frequency  = 44100;
+% number_of_source_channel = 1;
 
 
 %% load target audio source
-eval(['target_signals = ',target_signals_name,';']);
+eval(['target_signals = ',wideband_target_signals_name,';']);
 target_signals = reshape(target_signals, [size(target_signals,2),size(target_signals,3)]);  % 3dim to 2dim
 
 %% STFT
@@ -49,7 +51,10 @@ for frequency_bin_idx=2+STFT_L/2:STFT_L
     
 end
 
-Music_pseudospectrum = geomean(abs(Music_pseudospectrum_of_each_bins));
+% Music_pseudospectrum = geomean(abs(Music_pseudospectrum_of_each_bins));
+% Music_pseudospectrum = mean(abs(Music_pseudospectrum_of_each_bins));
+% weighted mean
+Music_pseudospectrum = sum(w.*abs(Music_pseudospectrum_of_each_bins))./sum(w);
 
 Music_pseudospectrum_sorted = findpeaks(Music_pseudospectrum);
 Music_pseudospectrum_sorted = sort(Music_pseudospectrum_sorted,'descend');
