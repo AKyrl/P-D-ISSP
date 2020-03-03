@@ -14,7 +14,7 @@ run config.m
 
 
 %% load target audio source
-eval(['target_signals = ',wideband_target_signals_name,';']);
+eval(['target_signals = ',target_signals_name,';']);
 target_signals = reshape(target_signals, [size(target_signals,2),size(target_signals,3)]);  % 3dim to 2dim
 
 %% STFT
@@ -30,11 +30,15 @@ end
 angles            = [0:0.5:180];
 Music_pseudospectrum_of_each_bins = zeros(STFT_L/2-1, length(angles));
 
+target_signals_stft_power = zeros(size(target_signals_stft,1),STFT_L/2-1);
+
 for frequency_bin_idx=2+STFT_L/2:STFT_L
+    
     w = (frequency_bin_idx-STFT_L/2)*(sampling_frequency/STFT_L);
     recorded_signal_at_w  = zeros(size(target_signals_stft,1), size(target_signals_stft,3));
     for i=1:size(target_signals_stft,1)
         recorded_signal_at_w(i,:) = target_signals_stft(i,frequency_bin_idx,:);
+        target_signals_stft_power(i,frequency_bin_idx-STFT_L/2-1) = mean(abs(recorded_signal_at_w(i,:)).^2);
     end
     
     correlation_matrix = recorded_signal_at_w*recorded_signal_at_w';
@@ -54,9 +58,13 @@ end
 % Music_pseudospectrum = geomean(abs(Music_pseudospectrum_of_each_bins));
 % Music_pseudospectrum = mean(abs(Music_pseudospectrum_of_each_bins));
 % weighted mean
-Music_pseudospectrum = sum(w.*abs(Music_pseudospectrum_of_each_bins))./sum(w);
+target_signals_stft_power = sum(target_signals_stft_power);
+Music_pseudospectrum = sum(transpose(target_signals_stft_power).*abs(Music_pseudospectrum_of_each_bins))./sum(target_signals_stft_power);
 
 Music_pseudospectrum_sorted = findpeaks(Music_pseudospectrum);
+if sum(find(Music_pseudospectrum_sorted==max(Music_pseudospectrum)))==0
+    Music_pseudospectrum_sorted = [max(Music_pseudospectrum) Music_pseudospectrum_sorted];
+end
 Music_pseudospectrum_sorted = sort(Music_pseudospectrum_sorted,'descend');
 
 for DOA_idx=1:number_of_source_channel
