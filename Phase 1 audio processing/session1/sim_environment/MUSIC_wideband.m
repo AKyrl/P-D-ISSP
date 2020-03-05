@@ -3,7 +3,7 @@
 % should run create_micsigs.m before run MUSIC_wideband.m
 
 %% config
-run create_micsigs.m
+% run create_micsigs.m
 run config.m
 % STFT_L              = 1024;
 % STFT_overlap        = 50;
@@ -11,6 +11,8 @@ run config.m
 % mic_distance        = abs(m_pos(1,2)-m_pos(2,2))*100; % (cm)
 % sampling_frequency  = 44100;
 % number_of_source_channel = 1;
+target_signals_name = 'Mic(source_position_index, [1,3],:)';
+mic_distance        = 21.5; % (cm)
 
 
 %% load target audio source
@@ -32,13 +34,13 @@ Music_pseudospectrum_of_each_bins = zeros(STFT_L/2-1, length(angles));
 
 target_signals_stft_power = zeros(size(target_signals_stft,1),STFT_L/2-1);
 
-for frequency_bin_idx=2+STFT_L/2:STFT_L
+for frequency_bin_idx=1+STFT_L/2:STFT_L-1
     
     w = (frequency_bin_idx-STFT_L/2)*(sampling_frequency/STFT_L);
     recorded_signal_at_w  = zeros(size(target_signals_stft,1), size(target_signals_stft,3));
     for i=1:size(target_signals_stft,1)
         recorded_signal_at_w(i,:) = target_signals_stft(i,frequency_bin_idx,:);
-        target_signals_stft_power(i,frequency_bin_idx-STFT_L/2-1) = mean(abs(recorded_signal_at_w(i,:)).^2);
+        target_signals_stft_power(i,frequency_bin_idx-STFT_L/2) = mean(abs(recorded_signal_at_w(i,:)).^2);
     end
     
     correlation_matrix = recorded_signal_at_w*recorded_signal_at_w';
@@ -50,7 +52,7 @@ for frequency_bin_idx=2+STFT_L/2:STFT_L
     for angle_idx=1:length(angles)
         manifold_vector = exp((cosd(angles(angle_idx))*Mic_position./340./100).*1i.*w'*2*pi);
         manifold_vector = reshape(manifold_vector, [size(target_signals_stft,1) 1]);
-        Music_pseudospectrum_of_each_bins(frequency_bin_idx-STFT_L/2-1, angle_idx) = 1/(manifold_vector'*EigenVector*EigenVector'*manifold_vector);
+        Music_pseudospectrum_of_each_bins(frequency_bin_idx-STFT_L/2, angle_idx) = 1/(manifold_vector'*EigenVector*EigenVector'*manifold_vector);
     end
     
 end

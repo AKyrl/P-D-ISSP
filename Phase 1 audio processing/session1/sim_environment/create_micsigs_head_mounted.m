@@ -13,6 +13,7 @@ run config.m
 
 %% config of impulse response
 impulse_positions   = ["s30";"s60";"s90";"s-30";"s-60";"s-90"];
+% impulse_positions   = ["s30"];
 impulse_path        = '../Head_mounted_IRs/Head_mounted_IRs/';
 L1_impulse_filename = '/HMIR_L1.wav';
 L2_impulse_filename = '/HMIR_L2.wav';
@@ -21,37 +22,23 @@ R2_impulse_filename = '/HMIR_R2.wav';
 
 %% define filenames of waveforms and load waveforms
 
-% speech_filename{1}      = 'audio_files/speech1.wav';
-% speech_filename{2}      = 'audio_files/speech2.wav';
-% 
-% whitenoise_filename{1}  = 'audio_files/whitenoise_signal_1.wav';
-% whitenoise_filename{2}  = 'audio_files/whitenoise_signal_2.wav';
-
 dry_filename{1}         = 'audio_files/part1_track1_dry.wav';
 % dry_filename{2}         = 'audio_files/part1_track2_dry.wav';
-% 
-% bubble_filename         = 'audio_files/Babble_noise1.wav';
-
-% noise_filename = dry_filename;
-% noise_filename = whitenoise_filename;
-% 
-% [source{1}, source_Fs{1}]   = audioread(speech_filename{1});
-% [source{2}, source_Fs{2}]   = audioread(speech_filename{2});
-% 
-% 
-% [noise{1}, noise_Fs{1}]   = audioread(noise_filename{1});
-% [noise{2}, noise_Fs{2}]   = audioread(noise_filename{2});
 
 [target_signal, target_Fs]   = audioread(dry_filename{1});
 
 %% load impulse response
 for i=1:length(impulse_positions)
+    disp(strcat('loading: ',impulse_path, impulse_positions(i), L1_impulse_filename))
     [impulse_L1{i}, Fs]   = audioread(strcat(impulse_path, impulse_positions(i), L1_impulse_filename));
 %     impulse_L1{i}  = resample(impulse_L1{i}, upsampling_FS, Fs);
+    disp(strcat('loading: ',impulse_path, impulse_positions(i), L2_impulse_filename))
     [impulse_L2{i}, Fs]   = audioread(strcat(impulse_path, impulse_positions(i), L2_impulse_filename));
 %     impulse_L2{i}  = resample(impulse_L2{i}, upsampling_FS, Fs);
+    disp(strcat('loading: ',impulse_path, impulse_positions(i), R1_impulse_filename))
     [impulse_R1{i}, Fs]   = audioread(strcat(impulse_path, impulse_positions(i), R1_impulse_filename));
 %     impulse_R1{i}  = resample(impulse_R1{i}, upsampling_FS, Fs);
+    disp(strcat('loading: ',impulse_path, impulse_positions(i), R2_impulse_filename))
     [impulse_R2{i}, Fs]   = audioread(strcat(impulse_path, impulse_positions(i), R2_impulse_filename));
 %     impulse_R2{i}  = resample(impulse_R2{i}, upsampling_FS, Fs);
 end

@@ -10,3 +10,4 @@ sampling_frequency          = 44100;
 number_of_source_channel    = 1;
 LMS_step_size               = 0.1;
 LMS_precision_error         = 1e-10;
+fs                          = sampling_frequency;

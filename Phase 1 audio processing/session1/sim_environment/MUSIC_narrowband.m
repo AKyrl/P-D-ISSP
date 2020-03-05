@@ -14,11 +14,15 @@ run config.m
 
 %% load target audio source
 eval(['target_signals = ',target_signals_name,';']);
-target_signals = reshape(target_signals, [size(target_signals,2),size(target_signals,3)]);  % 3dim to 2dim
+target_signals = reshape(target_signals, ...
+    [size(target_signals,2),size(target_signals,3)]);  % 3dim to 2dim
 
 %% STFT
-target_signals_stft = zeros(size(target_signals,1), STFT_L, round(size(target_signals,2)/(round((100-STFT_overlap)*STFT_L/100)))-1);
-for i=1:size(target_signals,1)
+target_signals_stft = ...   % Mic_channels x STFT_length x #STFT_window
+    zeros(size(target_signals,1), ...
+    STFT_L, ...
+    round(size(target_signals,2)/(round((100-STFT_overlap)*STFT_L/100)))-1);
+for i=1:size(target_signals,1)  % STFT for each channel
     target_signals_stft(i,:,:) = stft(target_signals(i,:), ...
         'Window',hanning(STFT_L),...
         'OverlapLength',round(STFT_overlap*STFT_L/100));
@@ -55,12 +59,17 @@ Mic_position = [0:mic_distance:mic_distance*(size(target_signals_stft,1)-1)];
 
 for i=1:length(angles)
     w = W_max_freq;
-    manifold_vector = exp((cosd(angles(i))*Mic_position./340./100).*1i.*w'*2*pi);
+    manifold_vector = exp((cosd(angles(i))*Mic_position./340./100).*w'*1i*2*pi);
     manifold_vector = reshape(manifold_vector, [size(target_signals_stft,1) 1]);
     Music_pseudospectrum(i) = 1/(manifold_vector'*EigenVector*EigenVector'*manifold_vector);
 end
 
 Music_pseudospectrum_sorted = findpeaks(abs(Music_pseudospectrum));
+if sum(find(Music_pseudospectrum_sorted==max(abs(Music_pseudospectrum))))==0
+    Music_pseudospectrum_sorted = [max(Music_pseudospectrum) Music_pseudospectrum_sorted];
+end
+Music_pseudospectrum_sorted = sort(Music_pseudospectrum_sorted,'descend');
+
 
 for i=1:number_of_source_channel
     disp(['DOA' num2str(i) ':' num2str(angles(find(abs(Music_pseudospectrum)==Music_pseudospectrum_sorted(i))))]);
