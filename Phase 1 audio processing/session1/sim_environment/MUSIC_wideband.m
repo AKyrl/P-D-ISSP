@@ -3,7 +3,7 @@
 % should run create_micsigs.m before run MUSIC_wideband.m
 
 %% config
-% run create_micsigs.m
+run create_micsigs.m
 run config.m
 % STFT_L              = 1024;
 % STFT_overlap        = 50;
@@ -11,8 +11,6 @@ run config.m
 % mic_distance        = abs(m_pos(1,2)-m_pos(2,2))*100; % (cm)
 % sampling_frequency  = 44100;
 % number_of_source_channel = 1;
-target_signals_name = 'Mic(source_position_index, [1,3],:)';
-mic_distance        = 21.5; % (cm)
 
 
 %% load target audio source

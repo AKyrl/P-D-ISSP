@@ -2,13 +2,14 @@
 clear all
 
 %% config
-length_limit    = 100;
+length_limit    = 10;
 change_time     = 5;
 mic_distance    = 5;
 DOA_list        = [-90; -90; -60; -60; -90];
 STFT_L          = 1024;
 STFT_overlap    = 50;
-number_of_source_channel = 2;
+number_of_source_channel = 1;
+LMS_step_size   = 0.1;
 
 %% main process
 
@@ -19,6 +20,7 @@ DAS_out     = zeros(1,size(received_signal,2));
 speech      = zeros(size(received_signal,1),size(received_signal,2));
 GSC_out     = zeros(1,size(received_signal,2));
 GSC_removed = zeros(1,size(received_signal,2));
+DOA_overtime= zeros(number_of_source_channel,size(received_signal,2));
 
 DOA_idx = 1;
 
@@ -28,23 +30,31 @@ for time_index_start=1:change_time*fs:size(received_signal,2)
     [DOA_est] = DOA_estimation( received_signal(:,time_index_start:time_index_end), ...
         mic_distance, STFT_L, STFT_overlap, fs, number_of_source_channel)
     
-    DOA_est = DOA_list(DOA_idx);
-    DOA_idx = DOA_idx+1;
-    if DOA_idx>5
-        DOA_idx = 1;
+    DOA_est_sorted = sort(DOA_est,'descend');
+    if length(DOA_est_sorted)<number_of_source_channel
+        DOA_est_sorted(length(DOA_est_sorted)+1:number_of_source_channel)=inf;
     end
+    DOA_overtime(:,time_index_start:time_index_end) = DOA_est_sorted'*ones(1,time_index_end-time_index_start+1);
+    
+%     DOA_est = DOA_list(DOA_idx);
+%     DOA_idx = DOA_idx+1;
+%     if DOA_idx>5
+%         DOA_idx = 1;
+%     end
    
     
     [DAS_out(time_index_start:time_index_end) speech(:,time_index_start:time_index_end) ]= ...
         DAS_BF(received_signal(:,time_index_start:time_index_end), mic_distance, DOA_est(1), fs);
     [GSC_out(:,time_index_start:time_index_end) GSC_removed(:,time_index_start:time_index_end) ]= ...
-        GSC(DAS_out(time_index_start:time_index_end), speech(:,time_index_start:time_index_end));
+        GSC(DAS_out(time_index_start:time_index_end), ...
+        speech(:,time_index_start:time_index_end), ...
+        STFT_L, LMS_step_size);
 end
 
 %% visualize
 figure
 p(1)=subplot(3,1,1);
-plot(received_signal(1,:));
+plot(squeeze(mic_signals(1,1,:)));
 title('original');
 p(2)=subplot(3,1,2);
 plot(DAS_out);
@@ -54,16 +64,18 @@ plot(GSC_out);
 title('GSC');
 
 for i=1:4
-    SNR(i) = SNR_cal(squeeze(received_signal(1,i,:)));
+    SNR(i) = SNR_cal(squeeze(mic_signals(1,i,:)));
 end
 SNR_DAS = SNR_cal(DAS_out);
 SNR_GSC = SNR_cal(GSC_out);
+
+pause;
 
 
 %% load signals
 function [mic_signals fs] = load_audio_files(length_limit)
 
-impulse_path                = '../Head_mounted_real/';
+    impulse_path                = '../Head_mounted_real/';
     positions_filename_header   = ["-90_part2_track1";"90_part2_track2";"-60_part2_track1";"60_part2_track2"];
     M1_filename_header          = 'LMA_M1';
     M2_filename_header          = 'LMA_M2';
@@ -94,13 +106,16 @@ function [received_signal] = signal_fusion(mic_signals, change_time, fs)
     received_signal = zeros(4, size(mic_signals,3));
     switch_list = [1,2; 1,4; 3,4; 3,2; 1,4];
     time_index  = 1;
+    switch_list_idx = 1;
     
-    while((time_index+fs*change_time*size(switch_list, 1))<size(mic_signals,3))
-        for switch_list_idx = 1:size(switch_list, 1)
-            received_signal(:,time_index:time_index+fs*change_time-1) = ...
-                squeeze(mic_signals(switch_list(switch_list_idx,1),:,time_index:time_index+fs*change_time-1)) + ...
-                squeeze(mic_signals(switch_list(switch_list_idx,2),:,time_index:time_index+fs*change_time-1));
-            time_index = time_index+fs*change_time;
+    while((time_index+fs*change_time-1)<=size(mic_signals,3))
+        received_signal(:,time_index:time_index+fs*change_time-1) = ...
+            squeeze(mic_signals(switch_list(switch_list_idx,1),:,time_index:time_index+fs*change_time-1)) + ...
+            squeeze(mic_signals(switch_list(switch_list_idx,2),:,time_index:time_index+fs*change_time-1));
+        time_index = time_index+fs*change_time;
+        switch_list_idx = switch_list_idx+1;
+        if(switch_list_idx>size(switch_list, 1))
+            switch_list_idx = 1;
         end
     end
 end
@@ -109,7 +124,8 @@ end
 function [DOA_est] = DOA_estimation(target_signals, mic_distance_, STFT_L, STFT_overlap, fs, number_of_source_channel)
 
     %% STFT
-    target_signals_stft = zeros(size(target_signals,1), STFT_L, round(size(target_signals,2)/(round((100-STFT_overlap)*STFT_L/100)))-2);
+    target_signals_stft = zeros( size(target_signals,1), STFT_L, ...
+        round(size(target_signals,2)/(round((100-STFT_overlap)*STFT_L/100)))-2);
     for i=1:size(target_signals,1)
         target_signals_stft(i,:,:) = stft(target_signals(i,:), ...
             'Window',hanning(STFT_L),...
@@ -118,18 +134,21 @@ function [DOA_est] = DOA_estimation(target_signals, mic_distance_, STFT_L, STFT_
 
 
     %% evalute the pseudospectrum of each frequency bins
-    angles            = [0:0.5:180];
-    Music_pseudospectrum_of_each_bins = zeros(STFT_L/2-1, length(angles));
+    angles                              = [0:0.5:180];
+    Music_pseudospectrum_of_each_bins   = zeros(STFT_L/2-1, length(angles));
 
     target_signals_stft_power = zeros(size(target_signals_stft,1),STFT_L/2-1);
 
     for frequency_bin_idx=1+STFT_L/2:STFT_L-1
 
         w = (frequency_bin_idx-STFT_L/2)*(fs/STFT_L);
-        recorded_signal_at_w  = zeros(size(target_signals_stft,1), size(target_signals_stft,3));
+        recorded_signal_at_w  = ...
+            zeros(size(target_signals_stft,1), size(target_signals_stft,3));
         for i=1:size(target_signals_stft,1)
-            recorded_signal_at_w(i,:) = target_signals_stft(i,frequency_bin_idx,:);
-            target_signals_stft_power(i,frequency_bin_idx-STFT_L/2) = mean(abs(recorded_signal_at_w(i,:)).^2);
+            recorded_signal_at_w(i,:) = ...
+                target_signals_stft(i,frequency_bin_idx,:);
+            target_signals_stft_power(i,frequency_bin_idx-STFT_L/2) = ...
+                mean(abs(recorded_signal_at_w(i,:)).^2);
         end
 
         correlation_matrix = recorded_signal_at_w*recorded_signal_at_w';
@@ -141,7 +160,8 @@ function [DOA_est] = DOA_estimation(target_signals, mic_distance_, STFT_L, STFT_
         for angle_idx=1:length(angles)
             manifold_vector = exp((cosd(angles(angle_idx))*Mic_position./340./100).*1i.*w'*2*pi);
             manifold_vector = reshape(manifold_vector, [size(target_signals_stft,1) 1]);
-            Music_pseudospectrum_of_each_bins(frequency_bin_idx-STFT_L/2, angle_idx) = 1/(manifold_vector'*EigenVector*EigenVector'*manifold_vector);
+            Music_pseudospectrum_of_each_bins(frequency_bin_idx-STFT_L/2, angle_idx) = ...
+                1/(manifold_vector'* EigenVector* EigenVector'* manifold_vector);
         end
 
     end
@@ -150,6 +170,7 @@ function [DOA_est] = DOA_estimation(target_signals, mic_distance_, STFT_L, STFT_
     % Music_pseudospectrum = mean(abs(Music_pseudospectrum_of_each_bins));
     % weighted mean
     target_signals_stft_power = sum(target_signals_stft_power);
+    target_signals_stft_power(find(target_signals_stft_power==0)) = 1e-10;
     Music_pseudospectrum = sum(transpose(target_signals_stft_power).*abs(Music_pseudospectrum_of_each_bins()))./sum(target_signals_stft_power);
 
     Music_pseudospectrum_sorted = findpeaks(Music_pseudospectrum);
@@ -190,7 +211,12 @@ function [DAS_out speech] = DAS_BF(received_signal, mic_distance_, DOA_est, fs)
         end
     else
         print 'you are doomed';
-
+        for mic_idx=1:size(received_signal,1)
+            speech_temp = received_signal(mic_idx,:);
+            speech_temp = reshape(speech_temp,size(speech_DAS));
+            speech(mic_idx, :) = speech_temp(:);
+            speech_DAS(:) = speech(mic_idx,:)+ speech_DAS(:);
+        end
     end
 
     speech_DAS = speech_DAS/size(received_signal,1);
@@ -200,9 +226,7 @@ function [DAS_out speech] = DAS_BF(received_signal, mic_distance_, DOA_est, fs)
 end
 
 %% GSC
-function [GSC_out GSC_removed] = GSC(DAS_out, speech)
-STFT_L = 1024;
-LMS_step_size = 0.1;
+function [GSC_out GSC_removed] = GSC(DAS_out, speech, STFT_L, LMS_step_size)
 
 
     % generate essential data
@@ -243,26 +267,40 @@ LMS_step_size = 0.1;
             error_index = error_index+1;
         end
         denoise_result =  adaptive_filter_weight.*noise_reference_part;
-        GSC_out(time_index) = DAS_out(time_index)-sum(pre_denoise_result,'all');
-        GSC_removed(time_index) = GSC_removed(time_index) + sum(pre_denoise_result,'all');
+        GSC_out(time_index) = DAS_out(time_index)-sum(denoise_result,'all');
+        GSC_removed(time_index) = GSC_removed(time_index) + sum(denoise_result,'all');
     end
 
 end
 
 %% SNR
-function [VAD] = VAD_cal(sig)
+function [VAD] = VAD_cal(sig, detect_threshold, mean_step, mean_threshold)
+
+    if nargin < 2
+        detect_threshold = 1.5*1e-2;
+    end
+    if nargin < 3
+        mean_step = 1000;
+    end
+    if nargin < 4
+        mean_threshold = 0.97;
+    end
     % VAD=abs(squeeze(Mic(1,1,:)))>std(squeeze(Mic(1,1,:)))*1e-3;
-    VAD=abs(sig)>std(sig)*1e-2;
-    mean_step = 1000;
+    VAD=abs(sig)>std(sig)*detect_threshold;
+    
     for i=1:mean_step:length(VAD)-mean_step-1
-        VAD(i:i+mean_step-1) = mean(VAD(i:i+mean_step-1))>0.95;
+        VAD(i:i+mean_step-1) = mean(VAD(i:i+mean_step-1))>mean_threshold;
     end
 end
 
-function [SNR] = SNR_cal(sig)
-    VAD = VAD_cal(sig);
+function [SNR] = SNR_cal(sig, VAD)
+    sig(isnan(sig))=0;
+    
+    if nargin < 2
+        VAD = VAD_cal(sig);
+    end
+    
     noise_power = var(sig(VAD==0));
     speech_power = var(sig(VAD==1))-noise_power;
     SNR = 10*log10(speech_power./noise_power);
-    % soundsc(GSC_out,fs_RIR)
 end
