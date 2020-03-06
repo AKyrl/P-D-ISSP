@@ -5,10 +5,10 @@ data_length = 10;
 
 impulse_path        = '../Head_mounted_real/';
 % positions_filename_header   = ["90","-60","-90"];
-positions_filename_header   = ["-90"];
-% type_filename_header = "noise";
+positions_filename_header   = ["-60"];
+type_filename_header = "noise";
 % type_filename_header = "part2_track2";
-type_filename_header = "part2_track1";
+% type_filename_header = "part2_track1";
 L1_filename_header = 'HML_M1';
 L2_filename_header = 'HML_M2';
 R1_filename_header = 'HMR_M1';

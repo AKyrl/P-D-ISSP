@@ -1,5 +1,5 @@
 % GSC.m
-
+clear all
 run config.m
 
 %% define signal
@@ -17,12 +17,70 @@ Mic=Mic1+Mic2;
 
 
 %% Estimate DOA using MUSIC_narrrowband
-%str2num(positions_filename_header(1))
+% str2num(positions_filename_header(1))
 run MUSIC_wideband_linear_array.m;
-DOA_est = str2num(positions_filename_header(1))
+% DOA_est = 90-str2num(positions_filename_header(1))
+DOA_est = str2num(positions_filename_header(1));
+
+
+%% VAD
+VAD_ideal = VAD_cal_ideal(squeeze(Mic(1,1,:)));
+
 
 %% Estimate DAS using DAS_BF
-run DAS_BF_linear_array.m;
+Q = size(Mic,2);
+
+delay = abs(cosd(DOA_est)*mic_distance/100/340);
+
+samples = ceil(delay*fs);
+
+speech = zeros(size(Mic,2),size(Mic,3));
+speech_DAS = zeros(1,size(Mic,3));
+% noise_DAS = zeros(1,size(noise,3));
+
+if(DOA_est<90)
+    for mic_idx=1:size(Mic,2)
+        speech_temp = Mic(1,mic_idx,:);
+        speech_temp = reshape(speech_temp,size(speech_DAS));
+        speech(mic_idx, 1:end-(mic_idx-1)*samples) = speech_temp((mic_idx-1)*samples+1:end);
+        speech_DAS(1:end-(mic_idx-1)*samples) = speech(mic_idx,1:end-(mic_idx-1)*samples)+ speech_DAS(1:end-(mic_idx-1)*samples);
+    end
+elseif(DOA_est>90)
+     for mic_idx=1:size(Mic,2)
+         count = size(Mic,2)- mic_idx+1;
+        speech_temp = Mic(1,mic_idx,:);
+        speech_temp = reshape(speech_temp,size(speech_DAS));
+        speech(mic_idx, 1:end-(count-1)*samples) = speech_temp((count-1)*samples+1:end);
+        speech_DAS(1:end-(count-1)*samples) = speech(mic_idx,1:end-(count-1)*samples)+ speech_DAS(1:end-(count-1)*samples);
+    end
+else
+    print 'you are doomed';
+    
+end
+
+speech_DAS = speech_DAS/size(Mic,2);
+% noise_DAS = noise_DAS/size(Mic,2);
+
+DAS_out = 2*speech_DAS;
+% figure
+% plot(reshape(Mic(1,1,:),size(speech_DAS)));
+% hold on;
+% plot(speech_DAS);
+
+% soundsc(DAS_out,fs_RIR)
+% VAD=abs(speech_DAS)>std(speech_DAS)*1e-3;
+% speech_power_DAS = var(speech_DAS(VAD==1));
+% % noise_power_DAS= var(noise_DAS(VAD==1));
+% speech_power_DAS = var(speech_DAS);
+% noise_power_DAS= var(noise_DAS);
+
+
+for channel_idx=1:size(Mic,1)
+    for mic_idx=1:size(Mic,2)
+        speech_in_DAS(channel_idx,mic_idx) = var(Mic(channel_idx,mic_idx,:),0,'all');
+    end
+end
+% SNR_DAS = 10*log10(speech_power_DAS./noise_power_DAS);
 
 %% Main program
 VAD_ideal = VAD_cal_ideal(squeeze(Mic1(1,1,:)));
@@ -31,6 +89,7 @@ VAD_ideal = VAD_cal_ideal(squeeze(Mic1(1,1,:)));
 Griffiths_Jim_matrix = zeros(size(speech,1)-1, size(speech,1));
 Griffiths_Jim_matrix(:,1) = 1;
 for i=1:size(speech,1)-1
+
     Griffiths_Jim_matrix(i,i+1)=-1;
 end
 
@@ -53,6 +112,7 @@ GSC_removed = zeros(size(DAS_out));
 silence_threshold = 0;
 Window_step = 1;
 error_index = 1;
+
 % d as value
 for time_index=STFT_L+1:size(DAS_out,2)-STFT_L
     noise_reference_part  = noise_reference(:,time_index-STFT_L+1:time_index);
@@ -120,10 +180,10 @@ title('GSC_ideal');
 % linkaxes(p,'xy')
 % ylim([-0.01,0.01])
 
-for i=1:4
-    SNR(i) = SNR_cal(squeeze(Mic(1,i,:)));
-end
-SNR_DAS = SNR_cal(DAS_out);
+% for i=1:4
+%     SNR(i) = SNR_cal(squeeze(Mic(1,i,:)));
+% end
+% SNR_DAS = SNR_cal(DAS_out);
 SNR_GSC = SNR_cal(GSC_out);
 SNR_GSCi = SNR_cal(GSC_out_ideal);
 
@@ -133,6 +193,12 @@ end
 SNR_DAS_ideal = SNR_cal(DAS_out,VAD_ideal);
 SNR_GSC_ideal = SNR_cal(GSC_out,VAD_ideal);
 SNR_GSCi_ideal = SNR_cal(GSC_out_ideal,VAD_ideal);
+
+for i=1:4
+    SNR_ideal(i) = SNR_cal(squeeze(speech_noise(1,i,:)));
+end
+SNR_DAS_ideal = SNR_cal(DAS_out, VAD_ideal);
+SNR_GSC_ideal = SNR_cal(GSC_out, VAD_ideal);
 
 %% SNR
 function [VAD] = VAD_cal_ideal(sig)
@@ -145,8 +211,8 @@ end
 
 function [VAD] = VAD_cal(sig)
     % VAD=abs(squeeze(Mic(1,1,:)))>std(squeeze(Mic(1,1,:)))*1e-3;
-    VAD=abs(sig)>std(sig)*1e-2;
-    mean_step = 1000;
+    VAD=abs(sig)>std(sig)*1e-2*5;
+    mean_step = 100;
     for i=1:mean_step:length(VAD)-mean_step-1
         VAD(i:i+mean_step-1) = mean(VAD(i:i+mean_step-1))>0.95;
     end

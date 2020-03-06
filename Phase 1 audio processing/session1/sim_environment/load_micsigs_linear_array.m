@@ -2,11 +2,11 @@
 
 impulse_path        = '../Head_mounted_real/';
 % positions_filename_header   = ["90","-60","-90"];
-% positions_filename_header   = ["-60"];
-% % type_filename_header = "noise";
-% % type_filename_header = "part1_track1";
+positions_filename_header   = ["90"];
+% type_filename_header = "noise";
+% type_filename_header = "part1_track1";
 % type_filename_header = "part2_track1";
-% type_filename_header = "part2_track2";
+type_filename_header = "part2_track2";
 M1_filename_header = 'LMA_M1';
 M2_filename_header = 'LMA_M2';
 M3_filename_header = 'LMA_M3';

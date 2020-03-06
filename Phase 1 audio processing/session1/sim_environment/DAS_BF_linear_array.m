@@ -40,10 +40,12 @@ DAS_out = 2*speech_DAS;
 % hold on;
 % plot(speech_DAS);
 
-% soundsc(DAS_out,fs_RIR)
-VAD=abs(speech_DAS)>std(speech_DAS)*1e-3;
-speech_power_DAS = var(speech_DAS(VAD==1));
-% noise_power_DAS= var(noise_DAS(VAD==1));
+% % soundsc(DAS_out,fs_RIR)
+% VAD=abs(speech_DAS)>std(speech_DAS)*1e-3;
+% speech_power_DAS = var(speech_DAS(VAD==1));
+% % noise_power_DAS= var(noise_DAS(VAD==1));
+speech_power_DAS = var(speech_DAS);
+noise_power_DAS= var(noise_DAS);
 
 
 for channel_idx=1:size(Mic(:,:,:),1)

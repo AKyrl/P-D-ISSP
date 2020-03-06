@@ -3,9 +3,9 @@
 % should run create_micsigs.m before run MUSIC_wideband.m
 
 %% config
+run config.m
 % run create_micsigs.m
 % run load_micsigs_linear_array.m
-run config.m
 source_position_index = 1;
 
 % normalize
@@ -16,8 +16,9 @@ source_position_index = 1;
 %% calculate DOA of each 11pair of mics
 % for source_position_index=1:6
 %     disp(['source_position_index :' impulse_positions(source_position_index) ]);
-DOA_est = MUSIC_narrowband_estimation(Mic(source_position_index, [1,2,3,4],:), 5)
-DOA_est = MUSIC_wideband_estimation(Mic(source_position_index, [1,2,3,4],:), 5)
+% DOA_est = MUSIC_narrowband_estimation(Mic(source_position_index, [1,2,3,4],:), 5)
+% DOA_est = MUSIC_wideband_estimation(Mic(source_position_index, [1,2,3,4],:), 5)
+DOA_est = MUSIC_wideband_estimation(Mic(source_position_index, :,:), 5)
 DOA_est2 = 90-DOA_est;
 
 disp(['DOA_est:' num2str(DOA_est) ]);
