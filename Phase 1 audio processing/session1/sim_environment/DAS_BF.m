@@ -35,10 +35,6 @@ elseif(DOA_est>90)
         speech_temp = reshape(speech_temp,size(speech_DAS));
         speech(mic_idx, 1:end-(count-1)*samples) = speech_temp((count-1)*samples+1:end);
         speech_DAS(1:end-(count-1)*samples) = speech(mic_idx,1:end-(count-1)*samples)+ speech_DAS(1:end-(count-1)*samples);
-        % figure
-% plot(reshape(Mic(1,1,:),size(speech_DAS)));
-% hold on;
-% plot(speech_DAS);
 
         noise = reshape(noise,size(noise_DAS));
         noise_DAS(1:end-(count-1)*samples) = noise((count-1)*samples+1:end)+ noise_DAS(1:end-(count-1)*samples);
@@ -59,9 +55,11 @@ DAS_out = 2*(speech_DAS+noise_DAS);
 % plot(speech_DAS);
 
 % soundsc(DAS_out,fs_RIR)
-VAD=abs(speech_DAS)>std(speech_DAS)*1e-3;
-speech_power_DAS = var(speech_DAS(VAD==1));
-noise_power_DAS= var(noise_DAS(VAD==1));
+% VAD=abs(speech_DAS)>std(speech_DAS)*1e-3;
+% speech_power_DAS = var(speech_DAS(VAD==1));
+% noise_power_DAS= var(noise_DAS(VAD==1));
+speech_power_DAS = var(speech_DAS);
+noise_power_DAS= var(noise_DAS);
 
 
 for channel_idx=1:size(Mic(:,:,:),1)
