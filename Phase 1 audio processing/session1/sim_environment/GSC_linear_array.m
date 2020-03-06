@@ -4,12 +4,12 @@ run config.m
 
 %% define signal
 % run create_micsigs.m;
-positions_filename_header   = ["60"];
-type_filename_header = "part2_track2";
-run load_micsigs_linear_array.m;
-Mic2=Mic;
 positions_filename_header   = ["-60"];
 type_filename_header = "part2_track1";
+run load_micsigs_linear_array.m;
+Mic2=Mic;
+positions_filename_header   = ["60"]; 
+type_filename_header = "part2_track2";
 run load_micsigs_linear_array.m;
 Mic1=Mic;
 Mic=Mic1+Mic2;
@@ -17,9 +17,9 @@ Mic=Mic1+Mic2;
 
 
 %% Estimate DOA using MUSIC_narrrowband
-str2num(positions_filename_header(1))
+%str2num(positions_filename_header(1))
 run MUSIC_wideband_linear_array.m;
-DOA_est = 90-str2num(positions_filename_header(1))
+DOA_est = str2num(positions_filename_header(1))
 
 %% Estimate DAS using DAS_BF
 run DAS_BF_linear_array.m;

@@ -1,10 +1,14 @@
 % GSC.m
 
 %% define signal
-run create_micsigs_head_mounted.m;
+% run create_micsigs_head_mounted.m;
+run load_micsigs_head_mounted.m;
 
 %% Estimate DOA using MUSIC_narrrowband
 run MUSIC_wideband_head_mounted.m;
+Mic2 = Mic;
+Mic = Mic(1,[1,3],:);
+DOA_est = 90-str2num(positions_filename_header(1));
 
 %% Estimate DAS using DAS_BF
 run DAS_BF_head_mounted.m;
@@ -12,9 +16,9 @@ run DAS_BF_head_mounted.m;
 %% Main program
 
 % generate essential data
-Griffiths_Jim_matrix = zeros(size(RIR_sources,2)-1, size(RIR_sources,2));
+Griffiths_Jim_matrix = zeros(size(speech,1)-1, size(speech,1));
 Griffiths_Jim_matrix(:,1) = 1;
-for i=1:size(RIR_sources,2)-1
+for i=1:size(speech,1)-1
     Griffiths_Jim_matrix(i,i+1)=-1;
 end
 
@@ -122,13 +126,39 @@ title('GSC');
 
 
 %% SNR
-% VAD=abs(squeeze(Mic(1,1,:)))>std(squeeze(Mic(1,1,:)))*1e-3;
-VAD=abs(GSC_out)>std(GSC_out)*1e-2;
-mean_step = 20;
-for i=1:mean_step:length(VAD)-mean_step-1
-    VAD(i:i+mean_step-1) = mean(VAD(i:i+mean_step-1))>0.85;
+
+for i=1:2
+    SNR(i) = SNR_cal(squeeze(Mic(1,i,:)));
 end
-noise_power_GSC = var(GSC_out(VAD==0));
-speech_power_GSC = var(GSC_out(VAD==1));
-SNR_GSC = 10*log10(speech_power_GSC./noise_power_GSC);
-% soundsc(GSC_out,fs_RIR)
+SNR_DAS = SNR_cal(DAS_out);
+SNR_GSC = SNR_cal(GSC_out);
+
+%% SNR
+function [VAD] = VAD_cal_ideal(sig)
+    VAD=abs(sig)>std(sig)*1e-3;
+    mean_step = 20;
+    for i=1:mean_step:length(VAD)-mean_step-1
+        VAD(i:i+mean_step-1) = mean(VAD(i:i+mean_step-1))>0.85;
+    end
+end
+
+function [VAD] = VAD_cal(sig)
+    % VAD=abs(squeeze(Mic(1,1,:)))>std(squeeze(Mic(1,1,:)))*1e-3;
+    VAD=abs(sig)>std(sig)*1e-2;
+    mean_step = 1000;
+    for i=1:mean_step:length(VAD)-mean_step-1
+        VAD(i:i+mean_step-1) = mean(VAD(i:i+mean_step-1))>0.95;
+    end
+end
+
+function [SNR] = SNR_cal(sig, VAD)
+    sig(isnan(sig))=0;
+    
+    if nargin < 2
+        VAD = VAD_cal(sig);
+    end
+    
+    noise_power = var(sig(VAD==0));
+    speech_power = var(sig(VAD==1))-noise_power; 
+    SNR = 10*log10(speech_power./noise_power);
+end
