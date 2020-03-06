@@ -2,7 +2,7 @@
 clear all
 
 %% config
-length_limit    = 10;
+length_limit    = 200;
 change_time     = 5;
 mic_distance    = 5;
 DOA_list        = [-90; -90; -60; -60; -90];
@@ -28,12 +28,16 @@ for time_index_start=1:change_time*fs:size(received_signal,2)
     time_index_end = time_index_start+fs*change_time-1;
     
     [DOA_est] = DOA_estimation( received_signal(:,time_index_start:time_index_end), ...
-        mic_distance, STFT_L, STFT_overlap, fs, number_of_source_channel)
+        mic_distance, STFT_L, STFT_overlap, fs, number_of_source_channel);
     
     DOA_est_sorted = sort(DOA_est,'descend');
     if length(DOA_est_sorted)<number_of_source_channel
-        DOA_est_sorted(length(DOA_est_sorted)+1:number_of_source_channel)=inf;
-    end
+        DOA_est_sorted(length(DOA_est_sorted)+1:number_of_source_channel)=0;
+    end    M1_filename_header          = 'HML_M1';
+    M2_filename_header          = 'HML_M2';
+    M3_filename_header          = 'HMR_M1';
+    M4_filename_header          = 'HMR_M2';
+
     DOA_overtime(:,time_index_start:time_index_end) = DOA_est_sorted'*ones(1,time_index_end-time_index_start+1);
     
 %     DOA_est = DOA_list(DOA_idx);
@@ -81,6 +85,10 @@ function [mic_signals fs] = load_audio_files(length_limit)
     M2_filename_header          = 'LMA_M2';
     M3_filename_header          = 'LMA_M3';
     M4_filename_header          = 'LMA_M4';
+%     M1_filename_header          = 'HML_M1';
+%     M2_filename_header          = 'HML_M2';
+%     M3_filename_header          = 'HMR_M1';
+%     M4_filename_header          = 'HMR_M2';
 
     % load fs
     [audio, fs]  = audioread(strcat(impulse_path, M1_filename_header,'_',positions_filename_header(1),'.wav'));
@@ -201,7 +209,7 @@ function [DAS_out speech] = DAS_BF(received_signal, mic_distance_, DOA_est, fs)
             speech(mic_idx, 1:end-(mic_idx-1)*samples) = speech_temp((mic_idx-1)*samples+1:end);
             speech_DAS(1:end-(mic_idx-1)*samples) = speech(mic_idx,1:end-(mic_idx-1)*samples)+ speech_DAS(1:end-(mic_idx-1)*samples);
         end
-    elseif(DOA_est>90)
+    elseif(DOA_est>=90)
          for mic_idx=1:size(received_signal,1)
             count = size(received_signal,1)- mic_idx+1;
             speech_temp = received_signal(mic_idx,:);;
@@ -211,12 +219,6 @@ function [DAS_out speech] = DAS_BF(received_signal, mic_distance_, DOA_est, fs)
         end
     else
         print 'you are doomed';
-        for mic_idx=1:size(received_signal,1)
-            speech_temp = received_signal(mic_idx,:);
-            speech_temp = reshape(speech_temp,size(speech_DAS));
-            speech(mic_idx, :) = speech_temp(:);
-            speech_DAS(:) = speech(mic_idx,:)+ speech_DAS(:);
-        end
     end
 
     speech_DAS = speech_DAS/size(received_signal,1);
