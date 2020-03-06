@@ -47,7 +47,7 @@ speech_power_DAS = var(speech_DAS(VAD==1));
 
 
 for channel_idx=1:size(Mic(:,:,:),1)
-    for mic_idx=1:size(RIR_sources,2)
+    for mic_idx=1:size(Mic,2)
         speech_in_DAS(channel_idx,mic_idx) = var(Mic(channel_idx,mic_idx,:),0,'all');
     end
 end
