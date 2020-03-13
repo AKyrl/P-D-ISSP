@@ -1,58 +1,66 @@
 % preprocess_64_eeg.m
-% clear all
+clear all
 
 %% config
-eeg_file_folder = '../64_channel_Smarting_EEG_data/';
+eeg_file_folder = '../64_channel_Biosemi_EEG_data/';
 
 %% main process
 % some static config
-Number_of_train_subjects = 12;
-Number_of_mat_per_train_subjects = 4;
-Number_of_test_subjects = 12;
-Number_of_mat_per_test_subjects = 4;
+Number_of_train_subjects = 16;
+Number_of_mat_per_train_subjects = 6;
+Number_of_test_subjects = 16;
+Number_of_mat_per_test_subjects = 2;
 
-
-
-% add third_party
-%addpath('../third_party/biosig4c++-2.0.2_mex');
-% addpath('../third_party/eeglab2019_1');
-% addpath('../third_party/eeglab2019_1/functions/adminfunc');
-% addpath('../third_party/eeglab2019_1/functions/popfunc');
-% biosigpathfirst  
+% training data
 
 % load eeg data
 for subject_idx = 1:Number_of_train_subjects
-    current_dir = dir(strcat(eeg_file_folder,'Subject',num2str(subject_idx),'/'));
-    for file_idx = 1:Number_of_gdf_per_person
-        EEG{subject_idx, file_idx} = pop_biosig(strcat(eeg_file_folder,'Subject',num2str(subject_idx),'/',current_dir(file_idx+2).name));
+    current_dir_name = strcat(eeg_file_folder,'train/',num2str(subject_idx+1,'%02d'),'_subject/');
+    current_dir = dir(current_dir_name);
+    for file_idx = 1:Number_of_mat_per_train_subjects
+        EEG{subject_idx, file_idx} = load(strcat(current_dir_name,current_dir(file_idx+2).name),'trial');
     end
 end
-
-% eegread
-for subject_idx = 1:Number_of_train_subjects
-    for data_idx = 1:Number_of_gdf_per_person
-        AADEEG{subject_idx, data_idx} = eegread(EEG{subject_idx, data_idx}, 33027, 33025);
-    end
-end
-
-% downsample again
-for subject_idx = 1:Number_of_train_subjects
-    for data_idx = 1:Number_of_gdf_per_person
-        AADEEG_downsampled{subject_idx, data_idx} = zeros(ceil(size(AADEEG{subject_idx, data_idx}).*[1,20/EEG{subject_idx, data_idx}.srate]));
-        for channel_idx = 1:size(AADEEG{subject_idx, data_idx}, 1)
-            AADEEG_downsampled{subject_idx, data_idx}(channel_idx, :) = resample(double(AADEEG{subject_idx, data_idx}(channel_idx, :)), 20, EEG{subject_idx, data_idx}.srate);
-        end
-    end
-end
+% downsample
 fs = 20;
-
+for subject_idx = 1:Number_of_train_subjects
+    for data_idx = 1:Number_of_mat_per_train_subjects
+        EEG_downsampled{subject_idx, data_idx} = transpose(resample(double(transpose(EEG{subject_idx, data_idx}.trial.RawData.EegData)), fs, EEG{subject_idx, data_idx}.trial.FileHeader.SampleRate));
+    end
+end
 % BPF
 [b,a] = butter(5,[1 9]/(fs/2),'bandpass');
 for subject_idx = 1:Number_of_train_subjects
-    for data_idx = 1:Number_of_gdf_per_person
-        for channel_idx = 1:size(AADEEG{subject_idx, data_idx}, 1)
-            AADEEG_downsampled{subject_idx, data_idx}(channel_idx, :) = filter(b,a,AADEEG_downsampled{subject_idx, data_idx}(channel_idx, :));
+    for data_idx = 1:Number_of_mat_per_train_subjects
+        for channel_idx = 1:size(EEG{subject_idx, data_idx}, 1)
+            EEG_downsampled{subject_idx, data_idx}(channel_idx, :) = filter(b,a,EEG_downsampled{subject_idx, data_idx}(channel_idx, :));
         end
     end
 end
 
+% testing data
+
+% load eeg data
+for subject_idx = 1:Number_of_test_subjects
+    current_dir_name = strcat(eeg_file_folder,'train/',num2str(subject_idx+1,'%02d'),'_subject/');
+    current_dir = dir(current_dir_name);
+    for file_idx = 1:Number_of_mat_per_test_subjects
+        test_EEG{subject_idx, file_idx} = load(strcat(current_dir_name,current_dir(file_idx+2).name),'trial');
+    end
+end
+% downsample
+fs = 20;
+for subject_idx = 1:Number_of_test_subjects
+    for data_idx = 1:Number_of_mat_per_test_subjects
+        test_EEG_downsampled{subject_idx, data_idx} = transpose(resample(double(transpose(test_EEG{subject_idx, data_idx}.trial.RawData.EegData)), fs, test_EEG{subject_idx, data_idx}.trial.FileHeader.SampleRate));
+    end
+end
+% BPF
+[b,a] = butter(5,[1 9]/(fs/2),'bandpass');
+for subject_idx = 1:Number_of_test_subjects
+    for data_idx = 1:Number_of_mat_per_test_subjects
+        for channel_idx = 1:size(EEG{subject_idx, data_idx}, 1)
+            test_EEG_downsampled{subject_idx, data_idx}(channel_idx, :) = filter(b,a,test_EEG_downsampled{subject_idx, data_idx}(channel_idx, :));
+        end
+    end
+end
