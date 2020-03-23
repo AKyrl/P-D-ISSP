@@ -85,15 +85,15 @@ end
 for subject_idx = 1:Number_of_test_subjects
     for data_idx = 1:Number_of_mat_per_test_subjects
         test_EEG_ground_truth{subject_idx, data_idx}.channel_id = test_EEG{subject_idx, data_idx}.trial.attended_track;
-        test_EEG_ground_truth{subject_idx, data_idx}.channel_a = load(test_EEG{subject_idx, data_idx}.trial.stimuli{test_EEG_ground_truth{subject_idx, data_idx}.channel_id},'envelope1');
-        test_EEG_ground_truth{subject_idx, data_idx}.channel_u = load(test_EEG{subject_idx, data_idx}.trial.stimuli{3-test_EEG_ground_truth{subject_idx, data_idx}.channel_id},'envelope1');
+        test_EEG_ground_truth{subject_idx, data_idx}.channel_1 = load(test_EEG{subject_idx, data_idx}.trial.stimuli{1},'envelope1');
+        test_EEG_ground_truth{subject_idx, data_idx}.channel_2 = load(test_EEG{subject_idx, data_idx}.trial.stimuli{2},'envelope1');
     end
 end
 % downsample_ground truth
 fs = 20;
 for subject_idx = 1:Number_of_test_subjects
     for data_idx = 1:Number_of_mat_per_test_subjects
-        test_EEG_ground_truth{subject_idx, data_idx}.channel_a_downsample = resample(double(test_EEG_ground_truth{subject_idx, data_idx}.channel_a.envelope1), fs, 70);
-        test_EEG_ground_truth{subject_idx, data_idx}.channel_u_downsample = resample(double(test_EEG_ground_truth{subject_idx, data_idx}.channel_u.envelope1), fs, 70);
+        test_EEG_ground_truth{subject_idx, data_idx}.channel_1_downsample = resample(double(test_EEG_ground_truth{subject_idx, data_idx}.channel_1.envelope1), fs, 70);
+        test_EEG_ground_truth{subject_idx, data_idx}.channel_2_downsample = resample(double(test_EEG_ground_truth{subject_idx, data_idx}.channel_2.envelope1), fs, 70);
     end
 end
