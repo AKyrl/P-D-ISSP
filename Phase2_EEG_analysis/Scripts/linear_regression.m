@@ -9,12 +9,13 @@ train_groundtruth_name  = 'EEG_ground_truth';
 test_info_name          = 'test_EEG';
 test_signal_name        = 'test_EEG_downsampled';
 test_groundtruth_name   = 'test_EEG_ground_truth';
-subject_id              = 10;
-
-
+subject_id              = 6;
 
 %max_time_lag = window_length;
 %% main program
+
+correct = 0;
+wrong = 0;
 
 % load training_data
 eval(['train_info = ',train_info_name,';']);
@@ -44,6 +45,8 @@ time_length = min( length(train_ground_truth{subject_id}.channel_a_downsample), 
 
 test_signal_reconstruct_a = zeros(time_length, size(test_info, 2));
 test_signal_reconstruct_u = zeros(time_length, size(test_info, 2));
+
+for subject_id = 1:12
 
 for time_idx = 1:time_length
                       %min( length(ground_truth{measurement_idx}.channel_a_downsample), ...
@@ -114,26 +117,49 @@ end
 for measurement_idx=1:size(test_info, 2)
     disp(['For data ' num2str(measurement_idx)])
     
-    temp_1 = corrcoef(test_signal_reconstruct_a(:, measurement_idx),test_EEG_ground_truth{subject_id,measurement_idx}.channel_1_downsample(1:length(test_signal_reconstruct_a(:, measurement_idx))));
-    temp_2 = corrcoef(test_signal_reconstruct_a(:, measurement_idx),test_EEG_ground_truth{subject_id,measurement_idx}.channel_2_downsample(1:length(test_signal_reconstruct_a(:, measurement_idx))));
-    if abs(temp_1(1,2))>abs(temp_2(1,2))
-        channel = 1;
+    temp_a_1 = corrcoef(test_signal_reconstruct_a(:, measurement_idx),test_EEG_ground_truth{subject_id,measurement_idx}.channel_1_downsample(1:length(test_signal_reconstruct_a(:, measurement_idx))));
+    temp_a_2 = corrcoef(test_signal_reconstruct_a(:, measurement_idx),test_EEG_ground_truth{subject_id,measurement_idx}.channel_2_downsample(1:length(test_signal_reconstruct_a(:, measurement_idx))));
+    if abs(temp_a_1(1,2))>abs(temp_a_2(1,2))
+        channel_a = 1;
     else
-        channel = 2;
+        channel_a = 2;
     end
-    disp(['Test_a similar to channel ' num2str(channel) '(' num2str(temp_1(1,2)) ',' num2str(temp_2(1,2)) ')'])
+    disp(['Test_a similar to channel ' num2str(channel_a) '(' num2str(temp_a_1(1,2)) ',' num2str(temp_a_2(1,2)) ')'])
+       
+    temp_u_1 = corrcoef(test_signal_reconstruct_u(:, measurement_idx),test_EEG_ground_truth{subject_id,measurement_idx}.channel_1_downsample(1:length(test_signal_reconstruct_u(:, measurement_idx))));
+    temp_u_2 = corrcoef(test_signal_reconstruct_u(:, measurement_idx),test_EEG_ground_truth{subject_id,measurement_idx}.channel_2_downsample(1:length(test_signal_reconstruct_u(:, measurement_idx))));
+    if abs(temp_u_1(1,2))>abs(temp_u_2(1,2))
+        channel_u = 1;
+    else
+        channel_u = 2;
+    end
+    disp(['Test_u similar to channel ' num2str(channel_u) '(' num2str(temp_u_1(1,2)) ',' num2str(temp_u_2(1,2)) ')'])
     
-    temp_1 = corrcoef(test_signal_reconstruct_u(:, measurement_idx),test_EEG_ground_truth{subject_id,measurement_idx}.channel_1_downsample(1:length(test_signal_reconstruct_u(:, measurement_idx))));
-    temp_2 = corrcoef(test_signal_reconstruct_u(:, measurement_idx),test_EEG_ground_truth{subject_id,measurement_idx}.channel_2_downsample(1:length(test_signal_reconstruct_u(:, measurement_idx))));
-    if abs(temp_1(1,2))>abs(temp_2(1,2))
-        channel = 1;
+    if channel_a ~= channel_u
+        channel = channel_a;
     else
-        channel = 2;
+        if max([abs(temp_a_1(1,2)),abs(temp_a_2(1,2)),abs(temp_u_1(1,2)),abs(temp_u_2(1,2))])==max([abs(temp_a_1(1,2)),abs(temp_u_2(1,2))])
+            channel = 1;
+        else
+            channel = 2;
+        end
     end
-    disp(['Test_u similar to channel ' num2str(channel) '(' num2str(temp_1(1,2)) ',' num2str(temp_2(1,2)) ')'])
+    
+    result{subject_id,measurement_idx}.corr = [temp_a_1(1,2),temp_a_2(1,2),temp_u_1(1,2),temp_u_2(1,2)];
+    result{subject_id,measurement_idx}.channel = channel;
+    
+    disp(['The predict answer is attend to channel ' num2str(channel)])
     
     disp(['The correct answer is attend to channel ' num2str(test_info{subject_id, measurement_idx}.trial.attended_track)])
     
+    if channel==test_info{subject_id, measurement_idx}.trial.attended_track
+        correct = correct+1;
+    else
+        wrong = wrong+1;
+    end
+    
 end
 
+end
 
+disp(['Acc:' num2str(correct/(correct+wrong)*100) '%'])
